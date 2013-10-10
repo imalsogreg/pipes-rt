@@ -1,5 +1,5 @@
-pipesRT
-=======
+pipes-rt
+========
 
 A few pipes to yield values in timed patterns, and typeclasses to give values timestamps.
 
