@@ -1,0 +1,39 @@
+Name:               pipes-rt
+Version:            0.1.0
+License:            BSD3
+Copyright:          (c) 2013 Greg Hale
+Author:             Greg Hale
+Maintainer:         Greg Hale <imalsogreg@gmail.com>
+Stability:          Experimental
+Homepage:           http://github.com/ImAlsoGreg/pipes-rt
+Bug-Reports:        http://github.com/ImAlsoGreg/pipes-rt/issues
+Category:           Control, Pipes
+Build-Type:         Simple
+Synopsis:           A few pipes to control the timing of yields
+Cabal-Version:      >=1.8
+Extra-Source-Files: README.md
+Description:
+  Use this library to yield values downstream according to different timing rules.  For example, write a TMinus instance for your data, and they will be yielded at your specified time since the running of the effect.  Or use poissonCat to yield values with poisson timing.
+
+Source-Repository head
+  Type:     git
+  Location: git://github.com/ImAlsoGreg/pipes-rt
+
+Library
+  Hs-Source-Dirs: lib
+  Build-Depends:
+    base       (>= 4)
+   ,pipes      (>= 4)
+   ,time       (>= 1.4.0)
+   ,random     (>= 1.0)
+   ,statistics (>= 0.10.4)
+  Exposed-Modules:
+    Pipes.RealTime
+
+Executable PipesRealTimeExample
+  Hs-Source-Dirs: examples
+  Build-Depends:  base
+                , pipes
+                , pipes-rt
+                , time
+  Main-Is:        Examples.hs
