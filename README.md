@@ -32,7 +32,7 @@ For example:
 2013-10-10 19:55:54.025124 UTC
 2013-10-10 19:55:54.034661 UTC
 
-λ: -- Pass values with Poisson timing, average 100 Hz, print data and arrival time
+λ: -- Pass values with Poisson timing, average 4 Hz, print data and arrival time
 λ: runEffect $ for (each "Testing" >-> poissonCat 4) (\c -> lift (getCurrentTime >>= \t -> print (c,t)))
 ('T',2013-10-10 19:57:29.707621 UTC)
 ('e',2013-10-10 19:57:29.710815 UTC)
