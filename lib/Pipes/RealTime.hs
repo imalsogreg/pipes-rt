@@ -15,7 +15,10 @@ module Pipes.RealTime (
   poissonCat,
   genPoissonCat,
   catAtTimes,
-  catAtRelativeTimes
+  catAtRelativeTimes,
+
+  -- *Discard leftover result (?)
+  dropResult
   
   ) where
 
@@ -162,3 +165,6 @@ doubleToNomDiffTime x =
       t0 = UTCTime d0 (picosecondsToDiffTime 0)
       t1 = UTCTime d0 (picosecondsToDiffTime $ floor (x/1e-12))
   in  diffUTCTime t1 t0
+
+dropResult :: (Monad m) => Proxy a' a b' b m r -> Proxy a' a b' b m ()
+dropResult p = p >>= \_ -> return ()
