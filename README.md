@@ -1,6 +1,8 @@
 pipes-rt
 ========
 
+[![Build Status](https://secure.travis-ci.org/ImAlsoGreg/pipes-rt.png)](http://travis-ci.org/ImAlsoGreg/pipes-rt)
+
 A few pipes to yield values in timed patterns, and typeclasses to give values timestamps.
 
 For example:
