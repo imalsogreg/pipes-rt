@@ -11,7 +11,7 @@ For example:
 λ: import Pipes
 λ: import qualified Pipes.Prelude as PP
 λ: import Pipes.RealTime
-λ: import Data.Time.Clock
+λ: import Data.Time.Clock 
 
 λ: -- Pass values at 2 Hz
 λ: runEffect $ each [1..4] >-> steadyCat 2 >-> PP.print
