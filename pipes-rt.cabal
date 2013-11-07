@@ -1,5 +1,5 @@
 Name:               pipes-rt
-Version:            0.1.0
+Version:            0.2.0
 License:            BSD3
 Copyright:          (c) 2013 Greg Hale
 Author:             Greg Hale
@@ -13,7 +13,7 @@ Synopsis:           A few pipes to control the timing of yields
 Cabal-Version:      >=1.8
 Extra-Source-Files: README.md
 Description:
-  Use this library to yield values downstream according to different timing rules.  For example, write a TMinus instance for your data, and they will be yielded at your specified time since the running of the effect.  Or use poissonCat to yield values with poisson timing.
+  Use this library to yield values downstream according to different timing rules.  For example, use the relTimeCat pipe, and your data will be yielded at each datum's specified time since the running of the effect.  Or use poissonCat to yield values with poisson timing.
 
 Source-Repository head
   Type:     git

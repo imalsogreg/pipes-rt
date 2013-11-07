@@ -10,14 +10,14 @@ import System.IO
 data TestTypeA = TestValueA Double String
                deriving (Show)
 
-instance TMinus TestTypeA where
-  tMinusSec (TestValueA t _) = t
+relTimeOfA :: TestTypeA -> Double
+relTimeOfA (TestValueA t _) = t
 
 data TestTypeB = TestValueB UTCTime String
                deriving (Show)
 
-instance TimedEvent TestTypeB where
-  timeOf (TestValueB t _) = t
+timeOfB :: TestTypeB -> UTCTime
+timeOfB (TestValueB t _) = t
 
 -- Some test data that can associated relative timestamps
 testDataA :: [TestTypeA]
@@ -32,7 +32,6 @@ makeTestDataB t0 = map (\(TestValueA t _) -> TestValueB (addUTCTime (doubleToDif
               tZero = UTCTime (ModifiedJulianDay 0) (picosecondsToDiffTime 0)
           in diffUTCTime tUTC tZero
 
-
 main :: IO ()
 main = do
 
@@ -46,12 +45,11 @@ main = do
   threadDelay (truncate (1e6 :: Double))
 
   putStrLn "\nGenerate some values at their preferred times relative to now." >> drumRoll
-  runEffect $ each testDataA >-> relativeTimeCat >-> printWithTime
-
+  runEffect $ each testDataA >-> relativeTimeCat relTimeOfA >-> printWithTime
   putStrLn "\nGenerate some values at their preferred absolute times." >> drumRoll
   do
     now <- getCurrentTime
-    runEffect $ each (makeTestDataB now) >-> timeCat >-> printWithTime
+    runEffect $ each (makeTestDataB now) >-> timeCat timeOfB >-> printWithTime
 
 
 printWithTime :: (Show a) => Consumer a IO r
