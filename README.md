@@ -46,16 +46,16 @@ For example:
 
 λ: -- Get timestamps from the data being piped
 λ: import Data.Char
-λ: instance TMinus Char where tMinusSec = (/ 10) . fromIntegral . (\c -> ord c - ord 'a')
-λ: runEffect $ for (each "abcdwxyz" >-> relativeTimeCat ) (\v -> lift (getCurrentTime >>= \t -> print (v,t)))
-('a',2013-10-10 21:53:38.555041 UTC)
-('b',2013-10-10 21:53:38.65557 UTC)
-('c',2013-10-10 21:53:38.756121 UTC)
-('d',2013-10-10 21:53:38.855951 UTC)
-('w',2013-10-10 21:53:40.756643 UTC)
-('x',2013-10-10 21:53:40.855328 UTC)
-('y',2013-10-10 21:53:40.955936 UTC)
-('z',2013-10-10 21:53:41.055523 UTC)
+λ: let timeOfChar = (/ 10) . fromIntegral . (\c -> ord c - ord 'a')
+λ: runEffect $ for (each "abcdwxyz" >-> relativeTimeCat timeOfChar) (\v -> lift (getCurrentTime >>= \t -> print (v,t)))
+('a',2013-11-07 15:54:05.645025 UTC)   [ .. short pause .. ]
+('b',2013-11-07 15:54:05.745847 UTC)   [ .. short pause .. ]
+('c',2013-11-07 15:54:05.845771 UTC)   [ .. short pause .. ]
+('d',2013-11-07 15:54:05.945533 UTC)   [ .. long  pause .. ]
+('w',2013-11-07 15:54:07.847302 UTC)   [ .. short pause .. ]
+('x',2013-11-07 15:54:07.946071 UTC)   [ .. short pause .. ]
+('y',2013-11-07 15:54:08.045846 UTC)   [ .. short pause .. ]
+('z',2013-11-07 15:54:08.145573 UTC)   [ .. short pause .. ]
 
 
 ```
