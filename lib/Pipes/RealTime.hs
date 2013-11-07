@@ -78,7 +78,7 @@ dropRelativeExpired = do
   v <- await
   when (tMinusSec v < 0) dropRelativeExpired
   
-{-| Yield values at stead rate (Hz) -}
+{-| Yield values at steady rate (Hz) -}
 steadyCat :: Double -> Pipe a a IO r
 steadyCat rate = do
   t0 <- lift getCurrentTime
