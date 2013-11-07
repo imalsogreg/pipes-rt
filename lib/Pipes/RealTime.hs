@@ -13,7 +13,7 @@ module Pipes.RealTime (
   -- *Pipes throttled by you
   steadyCat,
   poissonCat,
-  genPoissonCat,
+  genPoissonCat',
   catAtTimes,
   catAtRelativeTimes,
 
@@ -22,6 +22,7 @@ module Pipes.RealTime (
   
   ) where
 
+import Prelude hiding (init)
 import Control.Monad
 import Pipes
 import Control.Concurrent (threadDelay)
@@ -30,6 +31,7 @@ import Data.Time.Calendar
 import System.Random
 import Statistics.Distribution
 import Statistics.Distribution.Exponential
+import Control.Monad.Random
 
 {-| Values in TimedEvents can produce a UTCTime, which is the time
     at which the value should be yielded -}
@@ -97,6 +99,22 @@ poissonCat :: Double -> Pipe a a IO r
 poissonCat rate = do
   rSeed <- lift randomIO
   genPoissonCat (mkStdGen rSeed) rate
+
+--evalRandP g = (flip evalRandP g) . distribute
+
+
+genPoissonCat' g rate = evalRandT g init
+  where
+    init = do
+      t0 <- liftIO getCurrentTime
+      go t0
+    go t = do
+      v <- await
+      u <- lift $ getRandomR (0,1.0)
+      let nextT = doubleToNomDiffTime (uniformToExponential rate u)  `addUTCTime` t :: UTCTime
+      lift . pauseUntil $ nextT
+      yield v
+      go nextT
 
 {-| Constant-rate Poisson process yielding values, seeded by you -}
 genPoissonCat :: StdGen -> Double -> Pipe a a IO r
