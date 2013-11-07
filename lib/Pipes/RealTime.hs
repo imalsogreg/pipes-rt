@@ -19,8 +19,10 @@ module Pipes.RealTime (
   
   ) where
 
+import Prelude hiding (dropWhile)
 import Control.Monad
 import Pipes
+import Pipes.Prelude (chain, dropWhile)
 import Control.Concurrent (threadDelay)
 import Data.Time.Clock
 import Data.Time.Calendar
@@ -32,31 +34,20 @@ import qualified System.Random.MWC.Distributions as MWCDists
     according to their relative timestamps.  Assumes that
     values arrive in ascending time order -}
 relativeTimeCat :: (a -> Double) -> Pipe a a IO r
-relativeTimeCat toTime = do
-  t0 <- lift getCurrentTime
-  forever $ do
-    v <- await
-    lift $ pauseUntil (doubleToNomDiffTime (toTime v) `addUTCTime` t0)
-    yield v
+relativeTimeCat toRelTime = lift getCurrentTime >>= \t0 ->
+  chain (\v -> pauseUntil (doubleToNomDiffTime (toRelTime v) `addUTCTime` t0))
 
 {-| Yield values at the absolute times given by their timestamps.
     Assumes that they arrive in ascending time order. Values with timestamps
     earlier than the starting time of the effect are yielded immediately -}
 timeCat :: (a -> UTCTime) -> Pipe a a IO r
-timeCat toRelTime = forever $ do
-    v <- await
-    lift $ pauseUntil (toRelTime v)
-    yield v
+timeCat toRelTime = chain $ pauseUntil . toRelTime
 
 {-| Discard events whose timestamps occur before the effect started running,
     instead of yielding them -}
 dropExpired :: (a -> UTCTime) -> Pipe a a IO ()
-dropExpired toTime = do
-  v <- await
-  now <- lift getCurrentTime
-  case compare now (toTime v) of
-    GT -> dropExpired toTime
-    _  -> return ()
+dropExpired toTime = lift getCurrentTime >>= \t0 ->
+  dropWhile $ (< t0) . toTime
 
 {-| Discard events whose relative timestamps are less than 0 -}
 dropRelativeExpired :: (Monad m) => (a -> Double) -> Pipe a a m ()
@@ -68,23 +59,26 @@ dropRelativeExpired toRelTime = do
 steadyCat :: Double -> Pipe a a IO r
 steadyCat rate = do
   t0 <- lift getCurrentTime
-  aux t0
+  loop t0
   where
     dtUTC = doubleToNomDiffTime (1/rate)
-    aux t =
+    loop t =
       let t' = dtUTC `addUTCTime` t in do
         lift $ pauseUntil t'
         v <- await
         yield v
-        aux t'
+        loop t'
 
 {-| Constant-rate Poisson process yielding values, randomized by IO -}
 poissonCat :: Double -> Pipe a a IO r
-poissonCat rate = lift createSystemRandom >>= \gen -> genPoissonCat gen rate
+poissonCat rate = lift createSystemRandom >>= \gen ->
+  genPoissonCat gen rate
 
-{-| Constant-rate Poisson process with a fixed seed - the same random every time -}
+{-| Constant-rate Poisson process with a fixed seed -
+    the same random every time -}
 poissonCatConst :: Double -> Pipe a a IO r
-poissonCatConst rate = lift create >>=  \gen -> genPoissonCat gen rate
+poissonCatConst rate = lift create >>=  \gen ->
+  genPoissonCat gen rate
 
 {-| Constant-rate Poisson process yielding values, seeded by you -}
 genPoissonCat :: GenIO -> Double -> Pipe a a IO r
