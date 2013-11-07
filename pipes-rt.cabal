@@ -22,11 +22,12 @@ Source-Repository head
 Library
   Hs-Source-Dirs: lib
   Build-Depends:
-    base       (>= 4)
-   ,pipes      (>= 4)
-   ,time       (>= 1.4.0)
-   ,random     (>= 1.0)
-   ,statistics (>= 0.10.4)
+    base        (>= 4)
+   ,pipes       (>= 4)
+   ,time        (>= 1.4.0)
+   ,random      (>= 1.0)
+   ,statistics  (>= 0.10.4)
+   ,mwc-random  (>= 0.13 && < 0.14)
   Exposed-Modules:
     Pipes.RealTime
 

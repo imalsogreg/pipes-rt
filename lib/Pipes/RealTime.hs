@@ -13,11 +13,12 @@ module Pipes.RealTime (
   -- *Pipes throttled by you
   steadyCat,
   poissonCat,
+  poissonCatConst,
   genPoissonCat,
   catAtTimes,
   catAtRelativeTimes,
 
-  -- *Discard leftover result (?)
+  -- *Discard leftover result
   dropResult
   
   ) where
@@ -27,9 +28,9 @@ import Pipes
 import Control.Concurrent (threadDelay)
 import Data.Time.Clock
 import Data.Time.Calendar
-import System.Random
-import Statistics.Distribution
-import Statistics.Distribution.Exponential
+
+import System.Random.MWC
+import qualified System.Random.MWC.Distributions as MWCDists
 
 {-| Values in TimedEvents can produce a UTCTime, which is the time
     at which the value should be yielded -}
@@ -94,39 +95,25 @@ steadyCat rate = do
 
 {-| Constant-rate Poisson process yielding values, randomized by IO -}
 poissonCat :: Double -> Pipe a a IO r
-poissonCat rate = do
-  rSeed <- lift randomIO
-  genPoissonCat (mkStdGen rSeed) rate
+poissonCat rate = lift createSystemRandom >>= \gen -> genPoissonCat gen rate
+
+{-| Constant-rate Poisson process with a fixed seed - the same random every time -}
+poissonCatConst :: Double -> Pipe a a IO r
+poissonCatConst rate = lift create >>=  \gen -> genPoissonCat gen rate
 
 {-| Constant-rate Poisson process yielding values, seeded by you -}
-genPoissonCat :: StdGen -> Double -> Pipe a a IO r
+genPoissonCat :: GenIO -> Double -> Pipe a a IO r
 genPoissonCat gen rate = do
   t0 <- lift getCurrentTime
-  let (ts,gen') = getNextTimes gen t0
-  aux (ts,gen')
+  loop t0
   where
-    getNextTimes :: StdGen -> UTCTime -> ([UTCTime], StdGen)
-    getNextTimes accGen t0 =
-      let (rs,g') = randoms' 100 (0,1) accGen
-          intervals = map (uniformToExponential rate) rs
-          delays = scanl (+) 0 intervals
-      in (map (flip addUTCTime t0 . doubleToNomDiffTime) delays, g') :: ([UTCTime], StdGen)
-    aux :: ([UTCTime], StdGen) -> Pipe a a IO r
-    aux (t:ts, g) =  do
-      lift $ pauseUntil t
-      v  <- await
+    loop t = do
+      v <- await
+      dt <- lift $ MWCDists.exponential rate gen
+      let t' = addUTCTime (doubleToNomDiffTime dt) t
+      lift $ pauseUntil t'
       yield v
-      case ts of
-        [] -> let (ts',g') = getNextTimes g t in aux (ts',g')
-        _  -> aux (ts,g)
-
-randoms' :: (Random a) => Int -> (a,a) -> StdGen -> ([a],StdGen)
-randoms' nVals vRange gen = aux nVals ([],gen)
-  where
-    aux 0 (l,g) = (l,g)
-    aux n (l,g) = let (v,g') = randomR vRange g in
-      aux (n-1) (v:l, g')
-
+      loop t'
 
 {-|Yield values at a set of absolute times.
    Yield remaining values immediately if the
@@ -155,9 +142,6 @@ pauseUntil t = do
   case compare now t of
     LT -> threadDelay (truncate (diffUTCTime t now * 1000000))
     _  -> return ()
-
-uniformToExponential :: Double -> Double -> Double
-uniformToExponential rate = quantile (exponential rate)
 
 doubleToNomDiffTime :: Double -> NominalDiffTime
 doubleToNomDiffTime x =

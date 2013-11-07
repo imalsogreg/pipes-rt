@@ -3,8 +3,7 @@ module Main where
 import Pipes
 import Pipes.RealTime
 import Control.Monad
-import Data.Time.Clock
-import Data.Time.Calendar
+import Data.Time
 import Control.Concurrent
 import System.IO
 
