@@ -2,9 +2,9 @@ module Pipes.RealTime (
 
   -- *Pipes throttled by their own timestamps
   timeCat,
+  timeCatDelayedBy,
   relativeTimeCat,
-  dropExpired,
-  dropRelativeExpired,
+  relativeTimeCatDelayedBy,
 
   -- *Pipes throttled by you
   steadyCat,
@@ -14,9 +14,6 @@ module Pipes.RealTime (
   catAtTimes,
   catAtRelativeTimes,
 
-  -- *Discard leftover result
-  dropResult
-  
   ) where
 
 import Prelude hiding (dropWhile)
@@ -32,28 +29,39 @@ import qualified System.Random.MWC.Distributions as MWCDists
 
 {-| Yield values some time after the effect is run,
     according to their relative timestamps.  Assumes that
-    values arrive in ascending time order -}
+    values arrive in ascending time order. Values with
+    negative relative timestamps are discarded -}
 relativeTimeCat :: (a -> Double) -> Pipe a a IO r
-relativeTimeCat toRelTime = lift getCurrentTime >>= \t0 ->
-  chain (\v -> pauseUntil (doubleToNomDiffTime (toRelTime v) `addUTCTime` t0))
+relativeTimeCat toRelTime = do
+  t0 <- lift getCurrentTime
+  dropWhile (( < 0 ) . toRelTime) >->
+    chain (\v -> pauseUntil (doubleToNomDiffTime (toRelTime v) `addUTCTime` t0))
+
+{-| Yield values at their timestamps, but delay
+    by some time (given in seconds).  Passing
+    a negative delay advances the generator,
+    discarding events happening before the effect -}
+relativeTimeCatDelayedBy :: (a -> Double) -> Double -> Pipe a a IO r
+relativeTimeCatDelayedBy toTime delay = relativeTimeCat toTime'
+     where toTime' = ((+ delay) . toTime)
 
 {-| Yield values at the absolute times given by their timestamps.
     Assumes that they arrive in ascending time order. Values with timestamps
-    earlier than the starting time of the effect are yielded immediately -}
+    earlier than the starting time of the effect are discarded -}
 timeCat :: (a -> UTCTime) -> Pipe a a IO r
-timeCat toRelTime = chain $ pauseUntil . toRelTime
+timeCat toTime = do
+  t0 <- lift getCurrentTime
+  dropWhile (( < t0 ) . toTime) >->
+    chain (pauseUntil . toTime)
 
-{-| Discard events whose timestamps occur before the effect started running,
-    instead of yielding them -}
-dropExpired :: (a -> UTCTime) -> Pipe a a IO ()
-dropExpired toTime = lift getCurrentTime >>= \t0 ->
-  dropWhile $ (< t0) . toTime
-
-{-| Discard events whose relative timestamps are less than 0 -}
-dropRelativeExpired :: (Monad m) => (a -> Double) -> Pipe a a m ()
-dropRelativeExpired toRelTime = do
-  v <- await
-  when (toRelTime v < 0) (dropRelativeExpired toRelTime)
+{-| Yield values at their absolute timesteps, but delay
+    or advance their production by some time (given in
+    seconds).  Values with timestamps less than zero
+    after adjustment are discarded -}
+timeCatDelayedBy :: (a -> UTCTime) -> Double -> Pipe a a IO r
+timeCatDelayedBy toTime delay = do
+  timeCat $ toTime'
+  where toTime' = (doubleToNomDiffTime delay `addUTCTime`) . toTime
   
 {-| Yield values at steady rate (Hz) -}
 steadyCat :: Double -> Pipe a a IO r
@@ -128,6 +136,3 @@ doubleToNomDiffTime x =
       t0 = UTCTime d0 (picosecondsToDiffTime 0)
       t1 = UTCTime d0 (picosecondsToDiffTime $ floor (x/1e-12))
   in  diffUTCTime t1 t0
-
-dropResult :: (Monad m) => Proxy a' a b' b m r -> Proxy a' a b' b m ()
-dropResult p = p >>= \_ -> return ()

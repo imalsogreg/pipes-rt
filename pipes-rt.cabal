@@ -1,6 +1,7 @@
 Name:               pipes-rt
-Version:            0.2.0
+Version:            0.4.0
 License:            BSD3
+License-File:       LICENSE
 Copyright:          (c) 2013 Greg Hale
 Author:             Greg Hale
 Maintainer:         Greg Hale <imalsogreg@gmail.com>
@@ -22,11 +23,9 @@ Source-Repository head
 Library
   Hs-Source-Dirs: lib
   Build-Depends:
-    base        (>= 4)
-   ,pipes       (>= 4)
-   ,time        (>= 1.4.0)
-   ,random      (>= 1.0)
-   ,statistics  (>= 0.10.4)
+    base        (>= 4.2 && < 4.8)
+   ,pipes       (>= 4   && < 4.1)
+   ,time        (>= 1.4 && < 1.5)
    ,mwc-random  (>= 0.13 && < 0.14)
   Exposed-Modules:
     Pipes.RealTime

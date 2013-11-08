@@ -46,10 +46,22 @@ main = do
 
   putStrLn "\nGenerate some values at their preferred times relative to now." >> drumRoll
   runEffect $ each testDataA >-> relativeTimeCat relTimeOfA >-> printWithTime
+
+  putStrLn "\nSame data, delay the generator by 2 seconds." >> drumRoll
+  runEffect $ each testDataA >-> relativeTimeCatDelayedBy relTimeOfA 2 >-> printWithTime
+
+  putStrLn "\nSame data, advance the generator by 2 seconds, dropping too-early values" >> drumRoll
+  runEffect $ each testDataA >-> relativeTimeCatDelayedBy relTimeOfA (-2) >-> printWithTime
+
   putStrLn "\nGenerate some values at their preferred absolute times." >> drumRoll
   do
     now <- getCurrentTime
     runEffect $ each (makeTestDataB now) >-> timeCat timeOfB >-> printWithTime
+
+  putStrLn "\nSame UTC timestamped data, advance the generator by 2 seconds dropping too-early values" >> drumRoll
+  do
+    now <- getCurrentTime
+    runEffect $ each (makeTestDataB now) >-> timeCatDelayedBy timeOfB (-2) >-> printWithTime
 
 
 printWithTime :: (Show a) => Consumer a IO r

@@ -11,6 +11,7 @@ For example:
 λ: import Pipes
 λ: import qualified Pipes.Prelude as PP
 λ: import Pipes.RealTime
+λ: import Data.Time
 λ: import Data.Time.Clock 
 
 λ: -- Pass values at 2 Hz
@@ -57,5 +58,15 @@ For example:
 ('y',2013-11-07 15:54:08.045846 UTC)   [ .. short pause .. ]
 ('z',2013-11-07 15:54:08.145573 UTC)   [ .. short pause .. ]
 
+λ: -- "Delay" the output by -2 seconds, which means
+λ: -- skip ahead by 2 seconds
+λ: let myPrint = (\v -> (getCurrentTime >>= \t -> print (v,t))) :: Char -> IO ()
+λ: runEffect $ for (each "abcdwxyz" >-> relativeTimeCatDelayedBy timeOfChar (-0.2)) (lift . myPrint)
+('c',2013-11-08 02:55:37.131626 UTC)
+('d',2013-11-08 02:55:37.232347 UTC)   [ .. we discarded the early data .. ]
+('w',2013-11-08 02:55:39.134008 UTC)   [ .. and jumped in immediately   .. ]  
+('x',2013-11-08 02:55:39.232772 UTC)   [ .. at 'c'                      .. ]
+('y',2013-11-08 02:55:39.332545 UTC)
+('z',2013-11-08 02:55:39.432303 UTC)
 
 ```
