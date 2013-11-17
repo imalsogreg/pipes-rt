@@ -17,7 +17,6 @@ module Pipes.RealTime (
   ) where
 
 import Prelude hiding (dropWhile)
-import Control.Monad
 import Pipes
 import Pipes.Prelude (chain, dropWhile)
 import Control.Concurrent (threadDelay)
@@ -31,93 +30,95 @@ import qualified System.Random.MWC.Distributions as MWCDists
     according to their relative timestamps.  Assumes that
     values arrive in ascending time order. Values with
     negative relative timestamps are discarded -}
-relativeTimeCat :: (a -> Double) -> Pipe a a IO r
+relativeTimeCat :: (MonadIO m) => (a -> Double) -> Pipe a a m r
 relativeTimeCat toRelTime = do
-  t0 <- lift getCurrentTime
+  t0 <- liftIO getCurrentTime
   dropWhile (( < 0 ) . toRelTime) >->
-    chain (\v -> pauseUntil (doubleToNomDiffTime (toRelTime v) `addUTCTime` t0))
+    chain (\v -> liftIO $ pauseUntil
+                 (doubleToNomDiffTime (toRelTime v) `addUTCTime` t0))
 
 {-| Yield values at their timestamps, but delay
     by some time (given in seconds).  Passing
     a negative delay advances the generator,
     discarding events happening before the effect -}
-relativeTimeCatDelayedBy :: (a -> Double) -> Double -> Pipe a a IO r
+relativeTimeCatDelayedBy :: (MonadIO m) => (a -> Double) -> Double
+                            -> Pipe a a m r
 relativeTimeCatDelayedBy toTime delay = relativeTimeCat toTime'
      where toTime' = ((+ delay) . toTime)
 
 {-| Yield values at the absolute times given by their timestamps.
     Assumes that they arrive in ascending time order. Values with timestamps
     earlier than the starting time of the effect are discarded -}
-timeCat :: (a -> UTCTime) -> Pipe a a IO r
+timeCat :: (MonadIO m) => (a -> UTCTime) -> Pipe a a m r
 timeCat toTime = do
-  t0 <- lift getCurrentTime
+  t0 <- liftIO getCurrentTime
   dropWhile (( < t0 ) . toTime) >->
-    chain (pauseUntil . toTime)
+    chain (liftIO . pauseUntil . toTime)
 
 {-| Yield values at their absolute timesteps, but delay
     or advance their production by some time (given in
     seconds).  Values with timestamps less than zero
     after adjustment are discarded -}
-timeCatDelayedBy :: (a -> UTCTime) -> Double -> Pipe a a IO r
+timeCatDelayedBy :: (MonadIO m) => (a -> UTCTime) -> Double -> Pipe a a m r
 timeCatDelayedBy toTime delay = do
   timeCat $ toTime'
   where toTime' = (doubleToNomDiffTime delay `addUTCTime`) . toTime
   
 {-| Yield values at steady rate (Hz) -}
-steadyCat :: Double -> Pipe a a IO r
+steadyCat :: (MonadIO m) => Double -> Pipe a a m r
 steadyCat rate = do
-  t0 <- lift getCurrentTime
+  t0 <- liftIO getCurrentTime
   loop t0
   where
     dtUTC = doubleToNomDiffTime (1/rate)
     loop t =
       let t' = dtUTC `addUTCTime` t in do
-        lift $ pauseUntil t'
+        liftIO $ pauseUntil t'
         v <- await
         yield v
         loop t'
 
 {-| Constant-rate Poisson process yielding values, randomized by IO -}
-poissonCat :: Double -> Pipe a a IO r
-poissonCat rate = lift createSystemRandom >>= \gen ->
+poissonCat :: (MonadIO m) => Double -> Pipe a a m r
+poissonCat rate = liftIO createSystemRandom >>= \gen ->
   genPoissonCat gen rate
 
 {-| Constant-rate Poisson process with a fixed seed -
     the same random every time -}
-poissonCatConst :: Double -> Pipe a a IO r
-poissonCatConst rate = lift create >>=  \gen ->
+poissonCatConst :: (MonadIO m) => Double -> Pipe a a m r
+poissonCatConst rate = liftIO create >>=  \gen ->
   genPoissonCat gen rate
 
 {-| Constant-rate Poisson process yielding values, seeded by you -}
-genPoissonCat :: GenIO -> Double -> Pipe a a IO r
+genPoissonCat :: (MonadIO m) => GenIO -> Double -> Pipe a a m r
 genPoissonCat gen rate = do
-  t0 <- lift getCurrentTime
+  t0 <- liftIO getCurrentTime
   loop t0
   where
     loop t = do
       v <- await
-      dt <- lift $ MWCDists.exponential rate gen
+      dt <- liftIO $ MWCDists.exponential rate gen
       let t' = addUTCTime (doubleToNomDiffTime dt) t
-      lift $ pauseUntil t'
+      liftIO $ pauseUntil t'
       yield v
       loop t'
 
 {-|Yield values at a set of absolute times.
    Yield remaining values immediately if the
    time list becomes empty -}
-catAtTimes :: [UTCTime] -> Pipe a a IO r
+catAtTimes :: (MonadIO m) => [UTCTime] -> Pipe a a m r
 catAtTimes []     = cat
 catAtTimes (t:ts) = do
-  lift $ pauseUntil t
+  liftIO $ pauseUntil t
   v <- await
   yield v
   catAtTimes ts
 
 {-|Yield values at a set of times relative to the first received value.
    Yield remaining values immediately if the time list becomes empty -}
-catAtRelativeTimes :: [Double] -> Pipe a a IO r
+catAtRelativeTimes :: (MonadIO m) => [Double] -> Pipe a a m r
 catAtRelativeTimes []       = cat
-catAtRelativeTimes ts@(_:_) = lift absTimes >>= catAtTimes 
+catAtRelativeTimes ts@(_:_) = liftIO absTimes >>= catAtTimes 
   where absTimes = 
           getCurrentTime >>= \t0 ->
           return $ map (\d -> doubleToNomDiffTime d `addUTCTime` t0) ts
