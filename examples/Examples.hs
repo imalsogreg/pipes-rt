@@ -6,6 +6,7 @@ import Control.Monad
 import Data.Time
 import Control.Concurrent
 import System.IO
+import Control.Concurrent.STM
 
 data TestTypeA = TestValueA Double String
                deriving (Show)
@@ -56,12 +57,20 @@ main = do
   putStrLn "\nGenerate some values at their preferred absolute times." >> drumRoll
   do
     now <- getCurrentTime
-    runEffect $ each (makeTestDataB now) >-> timeCat timeOfB >-> printWithTime
+    runEffect $
+      each (makeTestDataB now) >-> timeCat timeOfB >-> printWithTime
 
   putStrLn "\nSame UTC timestamped data, advance the generator by 2 seconds dropping too-early values" >> drumRoll
   do
     now <- getCurrentTime
-    runEffect $ each (makeTestDataB now) >-> timeCatDelayedBy timeOfB (-2) >-> printWithTime
+    runEffect $
+      each (makeTestDataB now) >->
+      timeCatDelayedBy timeOfB (-2) >-> printWithTime
+
+  putStrLn $ "Simulate some data from several sources that"
+  putStrLn $ "each take a long time to cue up to the right place."
+  sig <- atomically $ newTMVar
+  forM_ [1..3] $ \n -> (forkIO $ relSeekAndWait 
 
 
 printWithTime :: (Show a) => Consumer a IO r

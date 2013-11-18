@@ -14,6 +14,10 @@ module Pipes.RealTime (
   catAtTimes,
   catAtRelativeTimes,
 
+  -- *Functions for interacting with playback
+  relSeekAndWait,
+  relSeekAndWaitV
+  
   ) where
 
 import Prelude hiding (dropWhile)
@@ -25,6 +29,7 @@ import Data.Time.Calendar
 
 import System.Random.MWC
 import qualified System.Random.MWC.Distributions as MWCDists
+import Control.Concurrent.STM
 
 {-| Yield values some time after the effect is run,
     according to their relative timestamps.  Assumes that
@@ -123,6 +128,29 @@ catAtRelativeTimes ts@(_:_) = liftIO absTimes >>= catAtTimes
           getCurrentTime >>= \t0 ->
           return $ map (\d -> doubleToNomDiffTime d `addUTCTime` t0) ts
 
+{-|Drop values until the target relative timestamp is reached, then
+   wait until another thread writes () to the TMVar before proceeding
+   to yield values according to their timestamps -}
+relSeekAndWait :: (MonadIO m) =>
+                  TMVar () ->
+                  Double ->
+                  (a -> Double) ->
+                  Pipe a a m r
+relSeekAndWait signal time toTime = do
+  dropWhile ( (< time) . toTime)
+  () <- liftIO . atomically . readTMVar $ signal
+  relativeTimeCat toTime
+
+relSeekAndWaitV :: (MonadIO m) =>
+                   TMVar () ->
+                   Double ->
+                   (a -> Double) ->
+                   Pipe a a m r
+relSeekAndWaitV signal time toTime = do
+  dropWhile ( (< time) . toTime)
+  liftIO $ putStrLn "Seek done. Waiting for signal."
+  () <- liftIO . atomically . readTMVar $ signal
+  relativeTimeCat toTime
 
 pauseUntil :: UTCTime -> IO ()
 pauseUntil t = do
