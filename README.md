@@ -1,7 +1,7 @@
 pipes-rt
 ========
 
-[![Build Status](https://secure.travis-ci.org/ImAlsoGreg/pipes-rt.png)](http://travis-ci.org/ImAlsoGreg/pipes-rt)
+[![Build Status](https://travis-ci.org/imalsogreg/pipes-rt.svg?branch=master)](https://travis-ci.org/imalsogreg/pipes-rt.svg?branch=master)
 
 A few pipes to yield values at a steady rate, as a poisson process, or according to the values themselves
 
