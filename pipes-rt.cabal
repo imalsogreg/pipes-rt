@@ -12,7 +12,7 @@ Category:           Control, Pipes
 Build-Type:         Simple
 Synopsis:           A few pipes to control the timing of yields
 Cabal-Version:      >=1.8
-Tested-With:        GHC=7.6.3, GHC=7.10.1
+tested-with:        GHC==7.6.3, GHC==7.10.1
 Extra-Source-Files: README.md
 Description:
   Use this library to yield values downstream according to different timing rules.  For example, use the relTimeCat pipe, and your data will be yielded according to their timestamps.  Or use poissonCat to yield values with poisson timing.
